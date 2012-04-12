@@ -18,18 +18,24 @@ def serialise_object(zope_object):
     try:
         source = zope_object.manage_DAVget()
     except AttributeError:
-        source = pickle.dumps(zope_object)
+        if isinstance(zope_object, str):
+            # Workaround for mocks. This package is evil, it deserves evil hacks
+            source = zope_object
+        else:
+            source = pickle.dumps(zope_object)
     return serialise_string(source, 'blob')
+
 
 def serialise_directory(directory):
     hashes = {}
     for filename, source in directory.items():
-        serialised = serialise_string(source, 'blob')
-        hashed = git_hash(serialised)
+        serialised = serialise_object(source)
+        hashed = hashlib.sha1(serialised.decode("zip")).digest()
         hashes[filename] = hashed
-        yield hashed, serialised
-    tree = ""
+        yield git_hash(serialised), serialised
+    tree = []
     for filename in directory.keys():
-        tree += "100644 blob %s %s\x00" % (hashes[filename], filename)
+        tree.append("100644 %s\x00%s" % (filename, hashes[filename]))
+    tree = "\x00".join(tree)
     with_header = serialise_string(tree, 'tree')
     yield git_hash(with_header), with_header
