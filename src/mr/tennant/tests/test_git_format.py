@@ -18,3 +18,12 @@ class test_object_serialisation(unittest2.TestCase):
         expected_serialised = serialise_string("hello world", file_type="blob")
         self.assertEqual(expected_serialised, serialised)
         
+    def test_folder_serialisation(self):
+        from mr.tennant.git import serialise_directory
+        
+        directory = {"example.py":"return 'hi"}
+        serialised = list(serialise_directory(directory))
+        
+        # XXX What else to check?
+        self.assertEqual(len(serialised), 2)
+    

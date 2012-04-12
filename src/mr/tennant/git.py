@@ -20,3 +20,16 @@ def serialise_object(zope_object):
     except AttributeError:
         source = pickle.dumps(zope_object)
     return serialise_string(source, 'blob')
+
+def serialise_directory(directory):
+    hashes = {}
+    for filename, source in directory.items():
+        serialised = serialise_string(source, 'blob')
+        hashed = git_hash(serialised)
+        hashes[filename] = hashed
+        yield hashed, serialised
+    tree = ""
+    for filename in directory.keys():
+        tree += "100644 blob %s %s\x00" % (hashes[filename], filename)
+    with_header = serialise_string(tree, 'tree')
+    yield git_hash(with_header), with_header
