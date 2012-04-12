@@ -1,3 +1,4 @@
+import pickle
 import zlib
 import hashlib
 
