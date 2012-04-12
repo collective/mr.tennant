@@ -1,4 +1,8 @@
+import zlib
 import hashlib
+
+def git_hash(serialised):
+    return hashlib.sha1(serialised.decode("zip")).hexdigest()
 
 def serialise_string(string, file_type):
     with_header = "%s %u\x00%s" % (file_type, len(string), string)
@@ -8,3 +12,10 @@ def serialise_file(f):
     f.seek(0)
     string = f.read()
     return serialise_string(string, 'blob')
+
+def serialise_object(zope_object):
+    try:
+        source = zope_object.manage_DAVget()
+    except AttributeError:
+        source = pickle.dumps(zope_object)
+    return serialise_string(source, 'blob')
