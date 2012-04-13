@@ -75,7 +75,8 @@ def get_commits_for_history(obj):
         commit = "tree %s\n" % tree[-1][0]
         if parent:
             commit += "parent %s\n" % parent
-        commit += "committer %s <%s@example.com> %d +0000\n" % (obj['user_name'], obj['user_name'], int(obj['time']))
+        commit += "author %s <%s@example.com> %d +0000\n" % (obj['user_name'].strip(), obj['user_name'].strip(), int(obj['time']))
+        commit += "committer %s <%s@example.com> %d +0000\n" % (obj['user_name'].strip(), obj['user_name'].strip(), int(obj['time']))
         commit += "\n"
         commit += obj['description']
         commit = serialise_string(commit, "commit")
