@@ -114,7 +114,6 @@ class test_object_serialisation(unittest2.TestCase):
         script = repository.foo.bar['example.py']
 
         serialised = serialise_directory(repository)
-        import pdb; pdb.set_trace( )
         
         try:
             cwd = os.getcwd()

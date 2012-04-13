@@ -23,7 +23,7 @@ def serialise_object(zope_object):
             # Workaround for mocks. This package is evil, it deserves evil hacks
             source = zope_object
         else:
-            source = pickle.dumps(zope_object)
+            raise
     return serialise_string(source, 'blob')
 
 def serialise_directory(directory):
@@ -107,4 +107,3 @@ def dump_objects(repo, objects, HEAD):
         with open(path, 'wb') as obj_file:
             obj_file.write(obj)
         
-    
