@@ -50,7 +50,7 @@ def serialise_directory(directory):
     tree = []
     for filename in directory.keys():
         tree.append("%s %s\x00%s" % (modes[filename], filename, hashes[filename]))
-    tree = "\x00".join(tree)
+    tree = "".join(tree)
     with_header = serialise_string(tree, 'tree')
     yield git_hash(with_header), with_header
 
