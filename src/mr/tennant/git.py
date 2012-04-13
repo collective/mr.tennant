@@ -3,6 +3,9 @@ import pickle
 import zlib
 import hashlib
 
+from Acquisition import aq_base
+
+
 def git_hash(serialised):
     return hashlib.sha1(serialised.decode("zip")).hexdigest()
 
@@ -32,23 +35,45 @@ def serialise_directory(directory):
     if not directory.items():
         raise ValueError("Empty directory")
     for filename, source in directory.items():
-        if hasattr(source, 'isPrincipiaFolderish') and source.isPrincipiaFolderish:
-            if not source.items():
+        unwrapped = aq_base(source)
+        if hasattr(unwrapped, 'isPrincipiaFolderish') and unwrapped.isPrincipiaFolderish:
+            print ("Recursing into %s" % filename)
+            items = None
+            if hasattr(unwrapped, "items"):
+                items = source.items
+            if items is None:
+                if hasattr(unwrapped, "objectItems"):
+                    items = source.objectItems
+            if items is None:
+                items = lambda:[]
+            if not items():
                 # Empty subtree, don't export it
-                del directory[filename]
+                print filename, "seems empty"
                 continue
             for item in serialise_directory(source):
                 serialised = item[1] # the last item in the loop is the subtree
                 yield item
             modes[filename] = "40000"
         else:
-            serialised = serialise_object(source)
-            modes[filename] = "100644"
-            yield git_hash(serialised), serialised
+            try:
+                serialised = serialise_object(source)
+                modes[filename] = "100644"
+            except:
+                # We can't serialise this object, it's probably not codeish
+                print "Can't get", filename
+                if filename == "example.py":
+                    import pdb; pdb.set_trace( )
+                continue
+            else:
+                yield git_hash(serialised), serialised
         hashed = hashlib.sha1(serialised.decode("zip")).digest()
         hashes[filename] = hashed
     tree = []
     for filename in sorted(directory.keys()):
+        if filename not in hashes:
+            # We didn't generate a hash, its most likely an empty directory
+            print "Giving up on", filename
+            continue
         tree.append("%s %s\x00%s" % (modes[filename], filename, hashes[filename]))
     tree = "".join(tree)
     with_header = serialise_string(tree, 'tree')
