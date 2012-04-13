@@ -1,3 +1,4 @@
+import os
 import pickle
 import zlib
 import hashlib
@@ -25,7 +26,6 @@ def serialise_object(zope_object):
             source = pickle.dumps(zope_object)
     return serialise_string(source, 'blob')
 
-
 def serialise_directory(directory):
     hashes = {}
     modes = {}
@@ -47,3 +47,45 @@ def serialise_directory(directory):
     tree = "\x00".join(tree)
     with_header = serialise_string(tree, 'tree')
     yield git_hash(with_header), with_header
+
+def serialise_commit(tree, message="initial"):
+    return serialise_string("""tree %s
+committer Zope <zope@example.com> 1243040974 -0700
+
+%s""" % (tree, message), "commit")
+
+def dump_objects(repo, objects, HEAD):
+    """
+    from mr.tennant.git import dump_objects, serialise_directory, serialise_commit
+    repo = tempfile.mkdtemp()
+    tree = list(serialise_directory(folderish_object))
+    commit = serialise_commit(tree[-1][0])
+    objects = tree
+    objects.append([git_hash(commit), commit])
+    dump_objects(repo, objects, HEAD=git_hash(commit))
+    """
+    git_path = os.path.join(repo, ".git")
+    if not os.path.exists(git_path):
+        os.mkdir(git_path)
+    objects_path = os.path.join(repo, ".git", "objects")
+    if not os.path.exists(objects_path):
+        os.mkdir(objects_path)
+
+    refs_path = os.path.join(repo, ".git", "refs")
+    if not os.path.exists(refs_path):
+        os.mkdir(refs_path)
+        os.mkdir(os.path.join(repo, ".git", "refs", "heads"))
+        with open(os.path.join(repo, ".git", "refs", "heads", "master"), 'wb') as ref_file:
+            ref_file.write(HEAD)
+    with open(os.path.join(repo, ".git", "HEAD"), 'wb') as ref_file:
+        ref_file.write("ref: refs/heads/master")
+    
+    for hashed, obj in objects:
+        directory_path = os.path.join(repo, ".git", "objects", hashed[:2])
+        if not os.path.exists(directory_path):
+            os.mkdir(directory_path)
+        path = os.path.join(directory_path, hashed[2:])
+        with open(path, 'wb') as obj_file:
+            obj_file.write(obj)
+        
+    

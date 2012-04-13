@@ -92,7 +92,6 @@ class test_object_serialisation(unittest2.TestCase):
             for hashed, contents in serialised:
                 path = os.path.join(git_repo, ".git", "objects", hashed[:2], hashed[2:])
                 self.assertEqual(open(path, 'rb').read(), contents)
-        
         finally:
             os.chdir(cwd)
             shutil.rmtree(git_repo)
