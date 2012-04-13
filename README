@@ -7,3 +7,25 @@ Then change it.
 Then push it.
 
 Yeah.
+
+For now it's just utlity functions, but try::
+
+	from AccessControl.SecurityManagement import newSecurityManager
+	from AccessControl.SecurityManager import setSecurityPolicy
+	from Testing.makerequest import makerequest
+	from Products.CMFCore.tests.base.security import PermissiveSecurityPolicy, OmnipotentUser
+	import tempfile
+	from mr.tennant.git import dump_objects, serialise_directory, serialise_commit
+
+	_policy=PermissiveSecurityPolicy()
+	_oldpolicy=setSecurityPolicy(_policy)
+	newSecurityManager(None, OmnipotentUser().__of__(app.acl_users))
+	app=makerequest(app)
+	from mr.tennant.git import get_commits_for_history
+
+	repo = tempfile.mkdtemp()
+	objects, HEAD = get_commits_for_history(app.repository)
+	dump_objects(repo, objects, HEAD=HEAD)
+	print repo
+
+When you go to the tempfolder it points you to and run 'git reset --hard' you'll get a working repo with a history, containing the contents of app.repository

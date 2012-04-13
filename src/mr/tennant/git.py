@@ -48,11 +48,30 @@ def serialise_directory(directory):
     with_header = serialise_string(tree, 'tree')
     yield git_hash(with_header), with_header
 
-def serialise_commit(tree, message="initial"):
+def serialise_commit(tree, message="initial", parent=None):
     return serialise_string("""tree %s
 committer Zope <zope@example.com> 1243040974 -0700
 
 %s""" % (tree, message), "commit")
+
+def get_commits_for_history(obj):
+    from dm.historical import getHistory
+    objects = {}
+    history = reversed(getHistory(obj))
+    parent = None
+    for obj in history:
+        tree = list(serialise_directory(obj['obj']))
+        objects.update(dict(tree))
+        commit = "tree %s\n" % tree[-1][0]
+        if parent:
+            commit += "parent %s\n" % parent
+        commit += "committer %s <%s@example.com> %d +0000\n" % (obj['user_name'], obj['user_name'], int(obj['time']))
+        commit += "\n"
+        commit += obj['description']
+        commit = serialise_string(commit, "commit")
+        objects[git_hash(commit)] = commit
+        parent = git_hash(commit)
+    return objects.items(), parent
 
 def dump_objects(repo, objects, HEAD):
     """

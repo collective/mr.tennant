@@ -96,4 +96,44 @@ class test_object_serialisation(unittest2.TestCase):
             os.chdir(cwd)
             shutil.rmtree(git_repo)
         
+    def test_nested_folders_across_transactions(self):
+        from Products.PythonScripts.PythonScript import manage_addPythonScript
+        import transaction
+        self.layer['app'].manage_addFolder("repository")
+        repository = self.layer['app']["repository"]
         
+        repository.manage_addFolder("foo")
+        transaction.commit()
+        
+        repository.foo.manage_addFolder("bar")
+        transaction.commit()
+        
+        manage_addPythonScript(repository.foo.bar, 'example.py')
+        transaction.commit()
+        
+        script = repository.foo.bar['example.py']
+
+        serialised = serialise_directory(repository)
+        import pdb; pdb.set_trace( )
+        
+        try:
+            cwd = os.getcwd()
+            
+            git_repo = tempfile.mkdtemp()
+            os.chdir(git_repo)
+            os.system("mkdir foo")
+            os.system("mkdir foo/bar")
+            with open(os.path.join(git_repo, "foo", "bar", "example.py"), 'wb') as real_file:
+                real_file.write(script.manage_DAVget())
+            os.system("git init")
+            os.system("git add foo")
+            os.system("git cia -m 'example'")
+            
+            for hashed, contents in serialised:
+                path = os.path.join(git_repo, ".git", "objects", hashed[:2], hashed[2:])
+                self.assertEqual(open(path, 'rb').read(), contents)
+        finally:
+            os.chdir(cwd)
+            shutil.rmtree(git_repo)
+        
+                

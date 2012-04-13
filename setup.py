@@ -31,6 +31,7 @@ setup(name='mr.tennant',
       zip_safe=False,
       install_requires=['setuptools',
                         'plone.app.testing',
+                        'dm.historical',
                         ],
       entry_points="""
       """,
