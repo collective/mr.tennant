@@ -29,8 +29,14 @@ def serialise_object(zope_object):
 def serialise_directory(directory):
     hashes = {}
     modes = {}
+    if not directory.items():
+        raise ValueError("Empty directory")
     for filename, source in directory.items():
         if hasattr(source, 'isPrincipiaFolderish') and source.isPrincipiaFolderish:
+            if not source.items():
+                # Empty subtree, don't export it
+                del directory[filename]
+                continue
             for item in serialise_directory(source):
                 serialised = item[1] # the last item in the loop is the subtree
                 yield item
@@ -60,7 +66,11 @@ def get_commits_for_history(obj):
     history = reversed(getHistory(obj))
     parent = None
     for obj in history:
-        tree = list(serialise_directory(obj['obj']))
+        try:
+            tree = list(serialise_directory(obj['obj']))
+        except ValueError:
+            # This isn't a valid commit, the root is empty
+            continue
         objects.update(dict(tree))
         commit = "tree %s\n" % tree[-1][0]
         if parent:
