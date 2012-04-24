@@ -61,8 +61,6 @@ def serialise_directory(directory):
             except:
                 # We can't serialise this object, it's probably not codeish
                 print "Can't get", filename
-                if filename == "example.py":
-                    import pdb; pdb.set_trace( )
                 continue
             else:
                 yield git_hash(serialised), serialised
