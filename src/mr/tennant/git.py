@@ -143,3 +143,15 @@ def dump_objects(repo, objects, HEAD):
         with open(path, 'wb') as obj_file:
             obj_file.write(obj)
         
+class export(object):
+    def __init__(self, context, request):
+        self.context = context
+        self.request = request
+    
+    def __call__(self):
+        import tempfile
+        repo = tempfile.mkdtemp()
+    	objects, HEAD = get_commits_for_history(self.context)
+    	dump_objects(repo, objects, HEAD=HEAD)
+        return "<html><body><h1>Repository created</h1><p>%s</p></body></html>" % repo
+        

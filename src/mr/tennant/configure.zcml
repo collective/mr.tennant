@@ -1,5 +1,13 @@
 <configure
     xmlns:zope="http://namespaces.zope.org/zope"
     xmlns:browser="http://namespaces.zope.org/browser">
+
+	<browser:page
+	    for="*"
+	    class="mr.tennant.git.export"
+		name="git"
+		permission="zope2.View"
+	    />
+	
   
 </configure>
