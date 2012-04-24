@@ -77,24 +77,23 @@ def serialise_directory(directory):
     with_header = serialise_string(tree, 'tree')
     yield git_hash(with_header), with_header
 
-def serialise_commit(tree, message="initial", parent=None):
-    return serialise_string("""tree %s
-committer Zope <zope@example.com> 1243040974 -0700
-
-%s""" % (tree, message), "commit")
-
-def get_commits_for_history(obj):
-    from dm.historical import getHistory
-    objects = {}
-    history = reversed(getHistory(obj))
+def get_commits_for_history(obj, refs):
+    from dm.historical import generateHistory
+    history = generateHistory(obj) # Note: this is newest first
     parent = None
+    commits = []
     for obj in history:
         try:
             tree = list(serialise_directory(obj['obj']))
         except ValueError:
             # This isn't a valid commit, the root is empty
             continue
-        objects.update(dict(tree))
+        for obj in tree.items():
+            yield obj # hash/serialised pair
+        commit = {'tree':tree[-1][0], 'username':obj['user_name'].strip(), 'time':int(obj['time']), 'description':obj['description']}
+        commits.append(commit)
+    
+    for commit in reversed(commits):
         commit = "tree %s\n" % tree[-1][0]
         if parent:
             commit += "parent %s\n" % parent
@@ -103,11 +102,11 @@ def get_commits_for_history(obj):
         commit += "\n"
         commit += obj['description']
         commit = serialise_string(commit, "commit")
-        objects[git_hash(commit)] = commit
+        yield git_hash(commit), commit
         parent = git_hash(commit)
-    return objects.items(), parent
+    refs['HEAD'] = parent
 
-def dump_objects(repo, objects, HEAD):
+def dump_objects(repo, objects, refs):
     """
     from mr.tennant.git import dump_objects, serialise_directory, serialise_commit
     repo = tempfile.mkdtemp()
@@ -124,15 +123,6 @@ def dump_objects(repo, objects, HEAD):
     if not os.path.exists(objects_path):
         os.mkdir(objects_path)
 
-    refs_path = os.path.join(repo, ".git", "refs")
-    if not os.path.exists(refs_path):
-        os.mkdir(refs_path)
-        os.mkdir(os.path.join(repo, ".git", "refs", "heads"))
-        with open(os.path.join(repo, ".git", "refs", "heads", "master"), 'wb') as ref_file:
-            ref_file.write(HEAD)
-    with open(os.path.join(repo, ".git", "HEAD"), 'wb') as ref_file:
-        ref_file.write("ref: refs/heads/master")
-    
     for hashed, obj in objects:
         directory_path = os.path.join(repo, ".git", "objects", hashed[:2])
         if not os.path.exists(directory_path):
@@ -140,6 +130,16 @@ def dump_objects(repo, objects, HEAD):
         path = os.path.join(directory_path, hashed[2:])
         with open(path, 'wb') as obj_file:
             obj_file.write(obj)
+
+    refs_path = os.path.join(repo, ".git", "refs")
+    if not os.path.exists(refs_path):
+        os.mkdir(refs_path)
+        os.mkdir(os.path.join(repo, ".git", "refs", "heads"))
+        with open(os.path.join(repo, ".git", "refs", "heads", "master"), 'wb') as ref_file:
+            ref_file.write(refs['HEAD'])
+    with open(os.path.join(repo, ".git", "HEAD"), 'wb') as ref_file:
+        ref_file.write("ref: refs/heads/master")
+    
         
 class export(object):
     def __init__(self, context, request):
@@ -149,7 +149,8 @@ class export(object):
     def __call__(self):
         import tempfile
         repo = tempfile.mkdtemp()
-    	objects, HEAD = get_commits_for_history(self.context)
-    	dump_objects(repo, objects, HEAD=HEAD)
+    	
+        refs = {} # This is filled in by get_commits_for_history before dump_objects needs it
+    	dump_objects(repo, get_commits_for_history(self.context, refs=refs), refs=refs)
         return "<html><body><h1>Repository created</h1><p>%s</p></body></html>" % repo
         
