@@ -8,7 +8,7 @@ Then push it.
 
 Yeah.
 
-For now it's just utlity functions, but try::
+For now it's just utility functions, but try::
 
 	from AccessControl.SecurityManagement import newSecurityManager
 	from AccessControl.SecurityManager import setSecurityPolicy
