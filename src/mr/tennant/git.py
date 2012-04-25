@@ -78,32 +78,36 @@ def serialise_directory(directory):
     yield git_hash(with_header), with_header
 
 def get_commits_for_history(obj, refs):
-    from dm.historical import generateHistory
-    history = generateHistory(obj) # Note: this is newest first
+    from dm.historical import getObjectAt
     parent = None
+    history = obj.undoable_transactions()
     commits = []
-    for obj in history:
+    for transaction in history:
+        commit = {'username':transaction['user_name'].strip(), 'time':int(transaction['time']), 'description':transaction['description']}
+        commit['obj'] = getObjectAt(obj, transaction['time'])
         try:
-            tree = list(serialise_directory(obj['obj']))
+            tree = list(serialise_directory(commit['obj']))
         except ValueError:
             # This isn't a valid commit, the root is empty
             continue
-        for obj in tree.items():
-            yield obj # hash/serialised pair
-        commit = {'tree':tree[-1][0], 'username':obj['user_name'].strip(), 'time':int(obj['time']), 'description':obj['description']}
+        for subobj in tree:
+            yield subobj # hash/serialised pair
+        commit['tree'] = tree[-1][0]
         commits.append(commit)
     
     for commit in reversed(commits):
-        commit = "tree %s\n" % tree[-1][0]
+        msg = "tree %s\n" % commit['tree']
         if parent:
-            commit += "parent %s\n" % parent
-        commit += "author %s <%s@example.com> %d +0000\n" % (obj['user_name'].strip(), obj['user_name'].strip(), int(obj['time']))
-        commit += "committer %s <%s@example.com> %d +0000\n" % (obj['user_name'].strip(), obj['user_name'].strip(), int(obj['time']))
-        commit += "\n"
-        commit += obj['description']
-        commit = serialise_string(commit, "commit")
-        yield git_hash(commit), commit
-        parent = git_hash(commit)
+            msg += "parent %s\n" % parent
+        if 'username' not in commit:
+            commit['username'] = "unknown"
+        msg += "author %(username)s <%(username)s@example.com> %(time)d +0000\n" % (commit)
+        msg += "committer %(username)s <%(username)s@example.com> %(time)d +0000\n" % (commit)
+        msg += "\n"
+        msg += commit['description']
+        msg = serialise_string(msg, "commit")
+        yield (git_hash(msg), msg)
+        parent = git_hash(msg)
     refs['HEAD'] = parent
 
 def dump_objects(repo, objects, refs):
