@@ -81,6 +81,7 @@ def get_commits_for_history(obj, refs):
     from dm.historical import getObjectAt
     parent = None
     history = obj.undoable_transactions()
+    history = history + [{'user_name':admin, 'time':obj._p_mtime, 'description':'Generated recent commit'}]
     commits = []
     for transaction in history:
         commit = {'username':transaction['user_name'].strip(), 'time':int(transaction['time']), 'description':transaction['description']}
